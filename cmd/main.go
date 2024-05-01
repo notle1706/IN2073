@@ -20,14 +20,15 @@ import (
 
 // Defines a "model" that we can use to communicate with the
 // frontend or the database
-type BookStore struct { 
-    ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"` 
-    BookName   string             `json:"name" bson:"name"`
-    BookAuthor string             `json:"author" bson:"author"` 
-    BookISBN   string             `json:"isbn,omitempty" bson:"isbn,omitempty"` 
-    BookPages  int                `json:"pages" bson:"pages"` 
-    BookYear   int                `json:"year" bson:"year"` 
+type BookStore struct {
+	ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	BookName   string             `json:"name" bson:"name"`
+	BookAuthor string             `json:"author" bson:"author"`
+	BookISBN   string             `json:"isbn,omitempty" bson:"isbn,omitempty"`
+	BookPages  int                `json:"pages" bson:"pages"`
+	BookYear   int                `json:"year" bson:"year"`
 }
+
 // Wraps the "Template" struct to associate a necessary method
 // to determine the rendering procedure
 type Template struct {
@@ -267,25 +268,36 @@ func main() {
 	})
 
 	e.POST("/api/books", func(c echo.Context) error {
-	  // 1. Get request data
-	  var newBook BookStore
-	  if err := c.Bind(&newBook); err != nil {
-	    return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
-	  }
+		var newBook BookStore
+		if err := c.Bind(&newBook); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
+		}
 
-	  // 2. Validate data (optional)
-	  // You can add checks here to ensure required fields are filled or data is in the expected format
+		// Data Validation
+		if newBook.BookName == "" || newBook.BookAuthor == "" || newBook.BookPages == 0 || newBook.BookYear == 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Name, author, pages and year cannot be empty!")
+		}
 
-	  // 3. Insert book into database
-	  ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	  defer cancel()
-	  result, err := coll.InsertOne(ctx, newBook)
-	  if err != nil {
-	    return echo.NewHTTPError(http.StatusInternalServerError, "Error creating book")
-	  }
+		//Data Duplication
+		count, err := coll.CountDocuments(ctx, bson.M{"BookName": newBook.BookName})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Error checking for book with the same name!")
+		}
 
-	  // 4. Respond with success or error
-	  return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
+		if count > 0 {
+			return echo.NewHTTPError(http.StatusConflict, "There already exists a book with the same name!")
+		}
+
+		// Data Insertion
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		result, err := coll.InsertOne(ctx, newBook)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Error creating book")
+		}
+
+		// 4. Respond with success or error
+		return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
 	})
 	e.Logger.Fatal(e.Start(":3030"))
 }

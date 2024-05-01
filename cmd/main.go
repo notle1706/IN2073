@@ -166,6 +166,7 @@ func findAllBooks(coll *mongo.Collection) []map[string]interface{} {
 			"BookAuthor": res.BookAuthor,
 			"BookISBN":   res.BookISBN,
 			"BookPages":  res.BookPages,
+			"BookYears":  res.BookYear,
 		})
 	}
 
@@ -228,7 +229,8 @@ func main() {
 	})
 
 	e.GET("/years", func(c echo.Context) error {
-		return c.NoContent(http.StatusNoContent)
+		books := findAllBooks(coll)
+		return c.Render(200, "year-table", books)
 	})
 
 	e.GET("/search", func(c echo.Context) error {

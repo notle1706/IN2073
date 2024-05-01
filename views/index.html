@@ -96,6 +96,18 @@
 </table>
 {{ end }}
 
+{{ block "year-table" . }}
+<table>
+  <tr>
+    <th>Year</th>
+  </tr>
+  {{ range . }}
+  <tr id="row-{{ .ID }}">
+    <th> {{ .BookYear }} </th>
+  </tr>
+  {{ end }}
+</table>
+{{ end }}
 
 {{ block "search-bar" . }}
 <div class="input_wrap">

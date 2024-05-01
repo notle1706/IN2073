@@ -20,15 +20,14 @@ import (
 
 // Defines a "model" that we can use to communicate with the
 // frontend or the database
-type BookStore struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty"`
-	BookName   string
-	BookAuthor string
-	BookISBN   string
-	BookPages  int
-	BookYear   int
+type BookStore struct { 
+    ID         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"` 
+    BookName   string             `json:"name" bson:"name"`
+    BookAuthor string             `json:"author" bson:"author"` 
+    BookISBN   string             `json:"isbn,omitempty" bson:"isbn,omitempty"` 
+    BookPages  int                `json:"pages" bson:"pages"` 
+    BookYear   int                `json:"year" bson:"year"` 
 }
-
 // Wraps the "Template" struct to associate a necessary method
 // to determine the rendering procedure
 type Template struct {
@@ -268,56 +267,25 @@ func main() {
 	})
 
 	e.POST("/api/books", func(c echo.Context) error {
-		// 1. Get request body
-		data := make(map[string]interface{})
-		if err := c.Bind(&data); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
-		}
+	  // 1. Get request data
+	  var newBook BookStore
+	  if err := c.Bind(&newBook); err != nil {
+	    return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
+	  }
 
-		// 2. Extract book data with type assertion and validation
-		book := BookStore{}
+	  // 2. Validate data (optional)
+	  // You can add checks here to ensure required fields are filled or data is in the expected format
 
-		// Extract and validate 'name'
-		name, ok := data["name"].(string)
-		if !ok || name == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'name'")
-		}
-		book.BookName = name
+	  // 3. Insert book into database
+	  ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	  defer cancel()
+	  result, err := coll.InsertOne(ctx, newBook)
+	  if err != nil {
+	    return echo.NewHTTPError(http.StatusInternalServerError, "Error creating book")
+	  }
 
-		// Extract and validate 'author'
-		author, ok := data["author"].(string)
-		if !ok || author == "" {
-			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'author'")
-		}
-		book.BookAuthor = author
-
-		// Extract and validate 'pages'
-		pages, ok := data["pages"].(float64) // JSON numbers are floats
-		if !ok || pages < 1 {
-			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'pages'")
-		}
-		book.BookPages = int(pages)
-
-		// Extract and validate 'year'
-		year, ok := data["year"].(float64) // JSON numbers are floats
-		if !ok || year < 1 {
-			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'year'")
-		}
-		book.BookYear = int(year)
-
-		// 3. Handle optional field (ISBN)
-		if isbn, ok := data["isbn"].(string); ok && isbn != "" {
-			book.BookISBN = isbn
-		}
-
-		// 4. Insert book into database
-		if _, err := coll.InsertOne(context.Background(), book); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create book")
-		}
-
-		// 5. Return success response
-		return c.JSON(http.StatusOK, map[string]string{"message": "Book created successfully"})
+	  // 4. Respond with success or error
+	  return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
 	})
-
 	e.Logger.Fatal(e.Start(":3030"))
 }

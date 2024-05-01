@@ -83,6 +83,20 @@
 {{ end }}
 
 
+{{ block "author-table" . }}
+<table>
+  <tr>
+    <th>Author</th>
+  </tr>
+  {{ range . }}
+  <tr id="row-{{ .ID }}">
+    <th> {{ .BookAuthor }} </th>
+  </tr>
+  {{ end }}
+</table>
+{{ end }}
+
+
 {{ block "search-bar" . }}
 <div class="input_wrap">
   <input type="text" required />

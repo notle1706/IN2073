@@ -194,6 +194,18 @@ func getBooks(coll *mongo.Collection) []map[string]interface{} {
 	return ret
 }
 
+func updateDocument(coll *mongo.Collection, filter bson.M, update bson.M) (*mongo.SingleResult, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After) // Return the updated document
+	result := coll.FindOneAndUpdate(ctx, filter, update, opts)
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+	return result, nil
+}
+
 func main() {
 	// Connect to the database. Such defer keywords are used once the local
 	// context returns; for this case, the local context is the main function
@@ -304,5 +316,33 @@ func main() {
 		return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
 	})
 
+	e.POST("/api/books", func(c echo.Context) error {
+		var newBook BookStore
+		if err := c.Bind(&newBook); err != nil {
+			return echo.NewHTTPError(http.StatusNotModified, "Invalid book data")
+		}
+
+		filter := bson.M{"_id": newBook.ID}
+		update := bson.M{"$set": bson.M{"name": newBook.BookName,
+			"author": newBook.BookAuthor,
+			"year":   newBook.BookYear,
+			"isbn":   newBook.BookISBN,
+			"pages":  newBook.BookPages,
+		}}
+
+		result, err := updateDocument(coll, filter, update)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusNotModified, "Unable to update")
+		}
+
+		var updatedDoc bson.M
+		if err := result.Decode(&updatedDoc); err != nil {
+			return echo.NewHTTPError(http.StatusNotModified, "Unable to update")
+		}
+
+		// Response
+		return c.JSON(http.StatusOK, map[string]interface{}{"message": "Book modified successfully", "id": newBook.ID})
+
+	})
 	e.Logger.Fatal(e.Start(":3030"))
 }

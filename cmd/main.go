@@ -270,22 +270,25 @@ func main() {
 	e.POST("/api/books", func(c echo.Context) error {
 		var newBook BookStore
 		if err := c.Bind(&newBook); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
+			return echo.NewHTTPError(http.StatusNotModified, "Invalid book data")
 		}
 
 		// Data Validation
 		if newBook.BookName == "" || newBook.BookAuthor == "" || newBook.BookPages == 0 || newBook.BookYear == 0 {
-			return echo.NewHTTPError(http.StatusBadRequest, "Name, author, pages and year cannot be empty!")
+			return echo.NewHTTPError(http.StatusNotModified, "Name, author, pages and year cannot be empty!")
 		}
 
 		//Data Duplication
-		count, err := coll.CountDocuments(ctx, bson.M{"BookName": newBook.BookName})
+		count, err := coll.CountDocuments(ctx, bson.M{"name": newBook.BookName,
+			"author": newBook.BookAuthor,
+			"year":   newBook.BookYear,
+			"isbn":   newBook.BookISBN,
+			"pages":  newBook.BookPages})
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Error checking for book with the same name!")
+			return echo.NewHTTPError(http.StatusNotModified, "Error checking for same book!")
 		}
-
 		if count > 0 {
-			return echo.NewHTTPError(http.StatusConflict, "There already exists a book with the same name!")
+			return echo.NewHTTPError(http.StatusNotModified, "There already exists the exact book!")
 		}
 
 		// Data Insertion
@@ -293,11 +296,15 @@ func main() {
 		defer cancel()
 		result, err := coll.InsertOne(ctx, newBook)
 		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Error creating book")
+			return echo.NewHTTPError(http.StatusNotModified, "Error creating book")
 		}
 
-		// 4. Respond with success or error
+		// Response
 		return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
+	})
+
+	e.PUT("/api/books", func(c echo.Context) error {
+
 	})
 	e.Logger.Fatal(e.Start(":3030"))
 }

@@ -344,5 +344,28 @@ func main() {
 		return c.JSON(http.StatusOK, map[string]interface{}{"message": "Book modified successfully", "id": newBook.ID})
 
 	})
+
+	e.DELETE("/api/books/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		if !primitive.IsValidObjectID(id) {
+			return echo.NewHTTPError(http.StatusNotModified, "Invalid book ID format")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		deleteResult, err := coll.DeleteOne(ctx, bson.M{"_id": id})
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return echo.NewHTTPError(http.StatusNotModified, "Book not found")
+			}
+			return echo.NewHTTPError(http.StatusNotModified, "Error deleting book")
+		}
+
+		if deleteResult.DeletedCount == 0 {
+			return echo.NewHTTPError(http.StatusNotModified, "Book not found")
+		}
+		return c.JSON(http.StatusOK, map[string]interface{}{"message": "Book modified successfully", "id": id})
+	})
+
 	e.Logger.Fatal(e.Start(":3030"))
 }

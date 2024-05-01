@@ -279,11 +279,15 @@ func main() {
 		}
 
 		//Data Duplication
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
 		count, err := coll.CountDocuments(ctx, bson.M{"name": newBook.BookName,
 			"author": newBook.BookAuthor,
 			"year":   newBook.BookYear,
 			"isbn":   newBook.BookISBN,
 			"pages":  newBook.BookPages})
+
 		if err != nil {
 			return echo.NewHTTPError(http.StatusNotModified, "Error checking for same book!")
 		}
@@ -292,8 +296,6 @@ func main() {
 		}
 
 		// Data Insertion
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 		result, err := coll.InsertOne(ctx, newBook)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusNotModified, "Error creating book")

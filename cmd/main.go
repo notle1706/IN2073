@@ -270,44 +270,52 @@ func main() {
 	e.POST("/api/books", func(c echo.Context) error {
 		// 1. Get request body
 		data := make(map[string]interface{})
-		err := c.Bind(&data)
-		if err != nil {
+		if err := c.Bind(&data); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
 		}
 
-		// 2. Extract book data
-		var book BookStore
-		// var ok bool
-		book.BookName = data["name"].(string)
+		// 2. Extract book data with type assertion and validation
+		book := BookStore{}
 
-		book.BookAuthor = data["author"].(string)
-		// if !ok {
-		// 	return echo.NewHTTPError(http.StatusBadRequest, "Missing required field 'author'")
-		// }
-		book.BookPages = data["pages"].(int)
-		// if !ok {
-		// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'pages'")
-		// }
-		book.BookYear = data["year"].(int)
-		// if !ok {
-		// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'year'")
-		// }
+		// Extract and validate 'name'
+		name, ok := data["name"].(string)
+		if !ok || name == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'name'")
+		}
+		book.BookName = name
+
+		// Extract and validate 'author'
+		author, ok := data["author"].(string)
+		if !ok || author == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'author'")
+		}
+		book.BookAuthor = author
+
+		// Extract and validate 'pages'
+		pages, ok := data["pages"].(float64) // JSON numbers are floats
+		if !ok || pages < 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'pages'")
+		}
+		book.BookPages = int(pages)
+
+		// Extract and validate 'year'
+		year, ok := data["year"].(float64) // JSON numbers are floats
+		if !ok || year < 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing or invalid 'year'")
+		}
+		book.BookYear = int(year)
 
 		// 3. Handle optional field (ISBN)
-		if isbn, ok := data["isbn"].(string); ok {
+		if isbn, ok := data["isbn"].(string); ok && isbn != "" {
 			book.BookISBN = isbn
 		}
 
-		// 4. Validate data (optional)
-		// You can add validation logic here to ensure required fields are present, etc.
+		// 4. Insert book into database
+		if _, err := coll.InsertOne(context.Background(), book); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create book")
+		}
 
-		// 5. Insert book into database
-		_, err = coll.InsertOne(context.Background(), book)
-		// if err != nil {
-		// 	return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create book")
-		// }
-
-		// 6. Return success response (optional)
+		// 5. Return success response
 		return c.JSON(http.StatusOK, map[string]string{"message": "Book created successfully"})
 	})
 

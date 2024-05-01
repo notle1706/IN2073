@@ -305,8 +305,5 @@ func main() {
 		return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
 	})
 
-	e.PUT("/api/books", func(c echo.Context) error {
-
-	})
 	e.Logger.Fatal(e.Start(":3030"))
 }

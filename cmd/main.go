@@ -316,7 +316,7 @@ func main() {
 		return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Book created successfully", "id": result.InsertedID.(primitive.ObjectID).Hex()})
 	})
 
-	e.PATCH("/api/books", func(c echo.Context) error {
+	e.PUT("/api/books", func(c echo.Context) error {
 		var newBook BookStore
 		if err := c.Bind(&newBook); err != nil {
 			return echo.NewHTTPError(http.StatusNotModified, "Invalid book data")

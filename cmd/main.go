@@ -277,7 +277,8 @@ func main() {
 
 		// 2. Extract book data
 		var book BookStore
-		book.BookName, ok := data["name"].(string)
+		var ok bool
+		book.BookName, ok = data["name"].(string)
 		if !ok {
 			return echo.NewHTTPError(http.StatusBadRequest, "Missing required field 'name'")
 		}

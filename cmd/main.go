@@ -267,5 +267,50 @@ func main() {
 		return c.JSON(http.StatusOK, books)
 	})
 
+	e.POST("/api/books", func(c echo.Context) error {
+		// 1. Get request body
+		data := make(map[string]interface{})
+		err := c.Bind(&data)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid book data")
+		}
+
+		// 2. Extract book data
+		var book BookStore
+		book.BookName, ok := data["name"].(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing required field 'name'")
+		}
+		book.BookAuthor, ok = data["author"].(string)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Missing required field 'author'")
+		}
+		book.BookPages, ok = data["pages"].(int)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'pages'")
+		}
+		book.BookYear, ok = data["year"].(int)
+		if !ok {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'year'")
+		}
+
+		// 3. Handle optional field (ISBN)
+		if isbn, ok := data["isbn"].(string); ok {
+			book.BookISBN = isbn
+		}
+
+		// 4. Validate data (optional)
+		// You can add validation logic here to ensure required fields are present, etc.
+
+		// 5. Insert book into database
+		_, err = coll.InsertOne(context.Background(), book)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create book")
+		}
+
+		// 6. Return success response (optional)
+		return c.JSON(http.StatusOK, map[string]string{"message": "Book created successfully"})
+	})
+
 	e.Logger.Fatal(e.Start(":3030"))
 }

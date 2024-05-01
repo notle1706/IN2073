@@ -277,18 +277,18 @@ func main() {
 
 		// 2. Extract book data
 		var book BookStore
-		var ok bool
+		// var ok bool
 		book.BookName = data["name"].(string)
 
-		book.BookAuthor, ok = data["author"].(string)
+		book.BookAuthor = data["author"].(string)
 		// if !ok {
 		// 	return echo.NewHTTPError(http.StatusBadRequest, "Missing required field 'author'")
 		// }
-		book.BookPages, ok = data["pages"].(int)
+		book.BookPages = data["pages"].(int)
 		// if !ok {
 		// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'pages'")
 		// }
-		book.BookYear, ok = data["year"].(int)
+		book.BookYear = data["year"].(int)
 		// if !ok {
 		// 	return echo.NewHTTPError(http.StatusBadRequest, "Invalid format for 'year'")
 		// }

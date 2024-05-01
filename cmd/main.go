@@ -173,6 +173,27 @@ func findAllBooks(coll *mongo.Collection) []map[string]interface{} {
 	return ret
 }
 
+func getBooks(coll *mongo.Collection) []map[string]interface{} {
+	cursor, err := coll.Find(context.TODO(), bson.D{{}})
+	var results []BookStore
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+	var ret []map[string]interface{}
+	for _, res := range results {
+		ret = append(ret, map[string]interface{}{
+			"id":     res.ID.Hex(),
+			"name":   res.BookName,
+			"author": res.BookAuthor,
+			"isbn":   res.BookISBN,
+			"pages":  res.BookPages,
+			"year":   res.BookYear,
+		})
+	}
+	return ret
+}
+
 func main() {
 	// Connect to the database. Such defer keywords are used once the local
 	// context returns; for this case, the local context is the main function
@@ -242,7 +263,7 @@ func main() {
 	})
 
 	e.GET("/api/books", func(c echo.Context) error {
-		books := findAllBooks(coll)
+		books := getBooks(coll)
 		return c.JSON(http.StatusOK, books)
 	})
 

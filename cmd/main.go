@@ -346,7 +346,7 @@ func main() {
 	})
 
 	e.DELETE("/api/books/:id", func(c echo.Context) error {
-		id := c.Param("id")[1:]
+		id := c.Param("id")
 		fmt.Println(id)
 		objID, err := primitive.ObjectIDFromHex(id)
 		if err != nil {
